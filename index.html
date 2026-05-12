@@ -680,7 +680,15 @@
           }
 
           waves.push({ study, rows, file: file.name });
-          waves.sort((a, b) => a.study.localeCompare(b.study));
+          waves.sort((a, b) => {
+            // Parse "W1 2026" -> year=2026, wave=1
+            const parse = s => {
+              const m = s.match(/W?(\d+)\s*(\d{4})/i);
+              return m ? { year: parseInt(m[2]), wave: parseInt(m[1]) } : { year: 9999, wave: 99 };
+            };
+            const pa = parse(a.study), pb = parse(b.study);
+            return pa.year !== pb.year ? pa.year - pb.year : pa.wave - pb.wave;
+          });
 
           rebuildFilters();
           renderWaveList();

@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Tracker — AZ-Sort</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:      #faf7f2;
+    --cream2:     #f2ece2;
+    --white:      #ffffff;
+    --black:      #1a1714;
+    --text:       #2a2420;
+    --muted:      #7a6f68;
+    --muted2:     #b0a49c;
+    --terra:      #c45c3a;
+    --terra-soft: #faf0ec;
+    --terra-mid:  #d97050;
+    --border:     #e4ddd4;
+    --border2:    #cec5ba;
+    --green:      #1f6b40;
+    --red:        #a83030;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    background-image: radial-gradient(circle, #c8c4bc 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    background: transparent;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  nav.scrolled {
+    background: var(--black);
+    box-shadow: 0 1px 0 rgba(196,92,58,0.5);
+  }
+
+  .nav-inner {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .wordmark {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  .wordmark em { font-style: italic; color: var(--terra-mid); font-weight: 300; }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+
+  .nav-back {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .nav-back:hover { color: var(--terra-mid); }
+
+  .nav-tag {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* HERO STRIP */
+  .hero-strip {
+    background: var(--black);
+    padding: 80px 32px 56px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 2px solid var(--terra);
+  }
+
+  .hero-strip-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-strip-glow {
+    position: absolute;
+    bottom: -120px; right: -120px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(196,92,58,0.2) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+    transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--terra-mid);
+    margin-bottom: 12px;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.05s both;
+  }
+
+  .eyebrow::before {
+    content: '';
+    display: block;
+    width: 18px;
+    height: 1.5px;
+    background: var(--terra-mid);
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--white);
+    margin-bottom: 10px;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+  }
+
+  h1 em { font-style: italic; color: var(--terra-mid); font-weight: 300; }
+
+  .hero-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 300;
+    line-height: 1.65;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.25s both;
+  }
+
+  /* MAIN */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--terra);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+  }
+
+  .card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted2);
+  }
+
+  .card-body { padding: 14px 16px; }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 8px;
+    padding: 28px 16px;
+    background: var(--cream);
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    background: var(--terra-soft);
+    border-color: var(--terra);
+  }
+
+  .drop-icon {
+    width: 34px; height: 34px;
+    margin: 0 auto 10px;
+    border: 1px solid var(--border2);
+    border-radius: 50%;
+    background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--muted);
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .drop-zone:hover .drop-icon,
+  .drop-zone.drag-over .drop-icon { border-color: var(--terra); color: var(--terra); }
+
+  .drop-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .drop-hint  { font-size: 10px; color: var(--muted2); font-family: 'DM Mono', monospace; }
+  input[type="file"] { display: none; }
+
+  /* WAVE LIST */
+  .wave-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+
+  .wave-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    animation: chipIn 0.2s ease both;
+  }
+
+  @keyframes chipIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .wave-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  .wave-label { flex: 1; color: var(--text); }
+
+  .wave-remove {
+    color: var(--muted2); cursor: pointer;
+    background: none; border: none; font-size: 14px;
+    transition: color 0.12s; padding: 0;
+  }
+
+  .wave-remove:hover { color: var(--red); }
+
+  /* FILTERS */
+  .filter-group { margin-bottom: 12px; }
+  .filter-group:last-child { margin-bottom: 0; }
+
+  .filter-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted2);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  select {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--cream);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23b0a49c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    transition: border-color 0.15s;
+  }
+
+  select:focus { border-color: var(--terra); }
+
+  /* PLATFORM CHECKBOXES */
+  .platform-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .platform-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.12s;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .platform-item:hover { background: var(--cream2); }
+
+  .platform-check {
+    width: 14px; height: 14px;
+    accent-color: var(--terra);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .platform-color-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* CHART AREA */
+  .chart-area { display: flex; flex-direction: column; gap: 16px; }
+
+  .chart-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--terra);
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+  }
+
+  .chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .chart-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--black);
+  }
+
+  .chart-card-title em { font-style: italic; color: var(--terra); font-weight: 300; }
+
+  .chart-card-sub {
+    font-size: 11px;
+    color: var(--muted2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chart-actions { display: flex; gap: 8px; }
+
+  .btn-download-chart {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px;
+    background: var(--cream2); color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500;
+    border: 1px solid var(--border2); border-radius: 5px; cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.12s, color 0.12s;
+  }
+
+  .btn-download-chart:hover { border-color: var(--terra); color: var(--terra); }
+
+  .chart-wrap { position: relative; height: 400px; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    gap: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .empty-icon { font-size: 2.5rem; opacity: 0.25; }
+
+  .empty-text { font-size: 13px; font-weight: 300; line-height: 1.6; max-width: 300px; }
+
+  .empty-hint { font-size: 11px; color: var(--terra); font-family: 'DM Mono', monospace; opacity: 0.7; }
+
+  /* STATUS */
+  .status-bar {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted2);
+    padding: 8px 12px;
+    background: var(--cream2);
+    border-radius: 5px;
+    border-left: 2px solid var(--border2);
+  }
+
+  .status-bar.ok  { border-left-color: var(--green); color: var(--green); }
+  .status-bar.err { border-left-color: var(--red);   color: var(--red); }
+
+  /* FOOTER */
+  footer {
+    background: var(--black);
+    border-top: 2px solid var(--terra);
+    padding: 28px 32px;
+    margin-top: 60px;
+  }
+
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-wordmark {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 700;
+    letter-spacing: -0.02em;
+    color: rgba(255,255,255,0.35);
+    text-decoration: none;
+  }
+
+  .footer-wordmark em { font-style: italic; font-weight: 300; color: var(--terra-mid); }
+  .footer-note { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.18); }
+
+  @media (max-width: 768px) {
+    nav { padding: 0 16px; }
+    .hero-strip { padding: 72px 20px 48px; }
+    main { padding: 32px 16px 60px; }
+    .layout { grid-template-columns: 1fr; }
+    footer { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="mainNav">
+  <div class="nav-inner">
+    <a class="wordmark" href="https://az-sort.github.io/HomePage/">az<em>-</em>sort</a>
+    <div class="nav-right">
+      <a class="nav-back" href="https://az-sort.github.io/HomePage/">← All tools</a>
+      <span class="nav-tag">CMV tracker</span>
+    </div>
+  </div>
+</nav>
+
+<div class="hero-strip" id="heroStrip">
+  <div class="hero-strip-glow" id="heroGlow"></div>
+  <div class="hero-strip-inner">
+    <div class="eyebrow">CMV tracker</div>
+    <h1>Media Penetration <em>Over Time.</em></h1>
+    <p class="hero-desc">Upload multiple wave files, set your filters, and see how platform penetration has shifted across waves.</p>
+  </div>
+</div>
+
+<main>
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- UPLOAD -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Wave files</div>
+        </div>
+        <div class="card-body">
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+            <div class="drop-icon">↑</div>
+            <div class="drop-title">Drop flat files here</div>
+            <div class="drop-hint">Output from Media Penetration tool</div>
+          </div>
+          <div class="wave-list" id="waveList"></div>
+        </div>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Filters</div>
+        </div>
+        <div class="card-body">
+          <div class="filter-group">
+            <span class="filter-label">Area</span>
+            <select id="areaSelect"><option value="">— upload files first —</option></select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Target Audience</span>
+            <select id="taSelect"><option value="">— upload files first —</option></select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Platforms</span>
+            <div class="platform-list" id="platformList">
+              <div style="font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace;">Upload files to see platforms</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CHART AREA -->
+    <div class="chart-area">
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title" id="chartTitle">Media <em>Penetration</em></div>
+            <div class="chart-card-sub" id="chartSub">Upload wave files to get started</div>
+          </div>
+          <div class="chart-actions">
+            <button class="btn-download-chart" id="downloadChartBtn">↓ PNG</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📈</div>
+            <div class="empty-text">Upload at least one wave file, then select your Area, TA, and Platforms to see the graph.</div>
+            <div class="empty-hint">Files should be flat output from the Media Penetration tool</div>
+          </div>
+          <canvas id="chartCanvas" style="display:none;"></canvas>
+        </div>
+      </div>
+
+      <div class="status-bar" id="statusBar" style="display:none;"></div>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <a class="footer-wordmark" href="https://az-sort.github.io/HomePage/">az<em>-</em>sort</a>
+    <span class="footer-note">github.com/az-sort</span>
+  </div>
+</footer>
+
+<script>
+  // ── State ──────────────────────────────────────────────────
+  const waves = []; // [{ study, rows: [{Study,TA,Area,Platform,Data}] }]
+  let chart = null;
+
+  // Distinct colors for platforms
+  const PALETTE = [
+    '#c45c3a','#0077bb','#009988','#7c4dcc','#e8a020',
+    '#1f6b40','#b83232','#2979b0','#e57c3a','#6b4dcc',
+    '#3aa085','#c45c8a','#5c8ac4','#8ac45c','#c4a05c',
+    '#5cc4b8','#a05cc4','#c4c45c','#5c7ac4','#c45c5c'
+  ];
+
+  // ── DOM ────────────────────────────────────────────────────
+  const dropZone    = document.getElementById('dropZone');
+  const fileInput   = document.getElementById('fileInput');
+  const waveList    = document.getElementById('waveList');
+  const areaSelect  = document.getElementById('areaSelect');
+  const taSelect    = document.getElementById('taSelect');
+  const platformList = document.getElementById('platformList');
+  const chartCanvas = document.getElementById('chartCanvas');
+  const emptyState  = document.getElementById('emptyState');
+  const statusBar   = document.getElementById('statusBar');
+  const chartTitle  = document.getElementById('chartTitle');
+  const chartSub    = document.getElementById('chartSub');
+
+  // ── Nav + parallax ─────────────────────────────────────────
+  const mainNav = document.getElementById('mainNav');
+  window.addEventListener('scroll', () => {
+    mainNav.classList.toggle('scrolled', window.scrollY > 10);
+  }, { passive: true });
+
+  const heroGlow  = document.getElementById('heroGlow');
+  const heroStrip = document.getElementById('heroStrip');
+  heroStrip.addEventListener('mousemove', e => {
+    const rect = heroStrip.getBoundingClientRect();
+    heroGlow.style.transform = `translate(${(e.clientX/rect.width - 0.5)*-36}px, ${(e.clientY/rect.height - 0.5)*-24}px)`;
+  });
+  heroStrip.addEventListener('mouseleave', () => { heroGlow.style.transform = 'translate(0,0)'; });
+
+  // ── Drop / click ───────────────────────────────────────────
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadFiles(e.dataTransfer.files); });
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => loadFiles(fileInput.files));
+
+  function loadFiles(files) {
+    Array.from(files).forEach(file => {
+      if (!file.name.match(/\.xlsx?$/i)) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          // Try to find the Media sheet or first sheet
+          const sheetName = wb.SheetNames.includes('Media') ? 'Media' : wb.SheetNames[0];
+          const raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+
+          if (raw.length < 2) return;
+
+          // Header row detection
+          const hdr = raw[0].map(v => v == null ? '' : String(v).trim());
+          const siStudy = hdr.indexOf('Study');
+          const siTA    = hdr.indexOf('TA');
+          const siArea  = hdr.indexOf('Area');
+          const siPlat  = hdr.indexOf('Platform');
+          const siData  = hdr.indexOf('Data');
+
+          if (siStudy === -1 || siTA === -1 || siArea === -1 || siPlat === -1 || siData === -1) {
+            setStatus(`"${file.name}" doesn't look like a Media Penetration flat file — missing expected columns.`, 'err');
+            return;
+          }
+
+          const rows = [];
+          for (let i = 1; i < raw.length; i++) {
+            const r = raw[i];
+            if (!r || r[siStudy] == null) continue;
+            rows.push({
+              Study:    String(r[siStudy]).trim(),
+              TA:       String(r[siTA]   || '').trim(),
+              Area:     String(r[siArea] || '').trim(),
+              Platform: String(r[siPlat] || '').trim(),
+              Data:     parseFloat(r[siData]) || 0,
+            });
+          }
+
+          if (!rows.length) return;
+
+          const study = rows[0].Study;
+
+          // Don't add duplicate studies
+          if (waves.find(w => w.study === study)) {
+            setStatus(`Wave "${study}" already loaded.`, 'err');
+            return;
+          }
+
+          waves.push({ study, rows, file: file.name });
+          waves.sort((a, b) => a.study.localeCompare(b.study));
+
+          rebuildFilters();
+          renderWaveList();
+          setStatus(`"${study}" loaded from ${file.name}.`);
+        } catch (err) {
+          setStatus(`Could not read "${file.name}": ${err.message}`, 'err');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // ── Render wave chips ──────────────────────────────────────
+  function renderWaveList() {
+    waveList.innerHTML = '';
+    waves.forEach((w, i) => {
+      const div = document.createElement('div');
+      div.className = 'wave-item';
+      div.style.animationDelay = `${i * 40}ms`;
+      div.innerHTML = `
+        <span class="wave-dot" style="background:${PALETTE[i % PALETTE.length]}"></span>
+        <span class="wave-label">${w.study}</span>
+        <button class="wave-remove" data-study="${w.study}" title="Remove">×</button>
+      `;
+      waveList.appendChild(div);
+    });
+
+    waveList.querySelectorAll('.wave-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = waves.findIndex(w => w.study === btn.dataset.study);
+        if (idx !== -1) waves.splice(idx, 1);
+        rebuildFilters();
+        renderWaveList();
+        renderChart();
+      });
+    });
+  }
+
+  // ── Rebuild filter selects ─────────────────────────────────
+  function rebuildFilters() {
+    const allRows = waves.flatMap(w => w.rows);
+
+    const areas     = [...new Set(allRows.map(r => r.Area))].sort();
+    const tas       = [...new Set(allRows.map(r => r.TA))].sort();
+    const platforms = [...new Set(allRows.map(r => r.Platform))].sort();
+
+    const prevArea = areaSelect.value;
+    const prevTA   = taSelect.value;
+
+    areaSelect.innerHTML = areas.map(a => `<option value="${a}">${a}</option>`).join('');
+    taSelect.innerHTML   = tas.map(t => `<option value="${t}">${t}</option>`).join('');
+
+    if (areas.includes(prevArea)) areaSelect.value = prevArea;
+    if (tas.includes(prevTA))     taSelect.value   = prevTA;
+
+    // Platform checkboxes
+    platformList.innerHTML = '';
+    platforms.forEach((p, i) => {
+      const label = document.createElement('label');
+      label.className = 'platform-item';
+      const color = PLATFORM_COLORS[p] || PALETTE[i % PALETTE.length];
+      label.innerHTML = `
+        <input type="checkbox" class="platform-check" value="${p}" checked>
+        <span class="platform-color-dot" style="background:${color}"></span>
+        <span>${p}</span>
+      `;
+      platformList.appendChild(label);
+    });
+
+    platformList.querySelectorAll('.platform-check').forEach(cb => {
+      cb.addEventListener('change', renderChart);
+    });
+
+    areaSelect.addEventListener('change', renderChart);
+    taSelect.addEventListener('change', renderChart);
+
+    renderChart();
+  }
+
+  // Fixed platform colors for consistency across waves
+  const PLATFORM_COLORS = {
+    'Total TV':           '#c45c3a',
+    'Free TV':            '#d97050',
+    'Cable TV':           '#e8a020',
+    'Radio':              '#7c4dcc',
+    'Radio AM':           '#9c6ddc',
+    'Radio FM':           '#bc8dec',
+    'OOH (Past 3M)':      '#0077bb',
+    'Internet':           '#1f6b40',
+    'Social (FB)':        '#2979b0',
+    'Video (YT)':         '#b83232',
+    'Facebook Messenger': '#3a7ac4',
+    'Google':             '#009988',
+    'Instagram':          '#c45c8a',
+    'Twitter':            '#5c8ac4',
+    'Spotify':            '#1f9b40',
+    'Lazada':             '#ff6600',
+    'Shopee':             '#ee4d2d',
+    'VOD':                '#6b4dcc',
+    'TikTok':             '#2a2a2a',
+  };
+
+  // ── Render chart ───────────────────────────────────────────
+  function renderChart() {
+    if (!waves.length) {
+      emptyState.style.display = 'flex';
+      chartCanvas.style.display = 'none';
+      if (chart) { chart.destroy(); chart = null; }
+      return;
+    }
+
+    const area      = areaSelect.value;
+    const ta        = taSelect.value;
+    const selPlats  = [...platformList.querySelectorAll('.platform-check:checked')].map(c => c.value);
+
+    if (!area || !ta || !selPlats.length) {
+      emptyState.style.display = 'flex';
+      chartCanvas.style.display = 'none';
+      if (chart) { chart.destroy(); chart = null; }
+      return;
+    }
+
+    const labels = waves.map(w => w.study);
+
+    const datasets = selPlats.map(platform => {
+      const color = PLATFORM_COLORS[platform] || PALETTE[selPlats.indexOf(platform) % PALETTE.length];
+      const data = waves.map(w => {
+        const row = w.rows.find(r => r.Area === area && r.TA === ta && r.Platform === platform);
+        return row ? parseFloat((row.Data * 100).toFixed(2)) : null;
+      });
+
+      return {
+        label: platform,
+        data,
+        borderColor: color,
+        backgroundColor: color + '18',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: color,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        tension: 0.35,
+        spanGaps: true,
+        fill: false,
+      };
+    });
+
+    emptyState.style.display = 'none';
+    chartCanvas.style.display = 'block';
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(chartCanvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#7a6f68',
+              font: { family: 'DM Mono', size: 11 },
+              boxWidth: 12,
+              padding: 16,
+            }
+          },
+          tooltip: {
+            backgroundColor: '#ffffff',
+            borderColor: '#e4ddd4',
+            borderWidth: 1,
+            titleColor: '#1a1714',
+            bodyColor: '#7a6f68',
+            titleFont: { family: 'Fraunces', size: 13 },
+            bodyFont: { family: 'DM Mono', size: 11 },
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '%' : 'N/A'}`,
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#b0a49c', font: { family: 'DM Mono', size: 11 } },
+            grid:  { color: 'rgba(0,0,0,0.05)' },
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: {
+              color: '#b0a49c',
+              font: { family: 'DM Mono', size: 11 },
+              callback: v => v + '%',
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            title: { display: true, text: 'Penetration %', color: '#b0a49c', font: { family: 'DM Mono', size: 10 } }
+          }
+        }
+      }
+    });
+
+    // Update chart title
+    chartTitle.innerHTML = `${area} — ${ta} <em>Penetration</em>`;
+    chartSub.textContent = `${selPlats.length} platform(s) · ${waves.length} wave(s)`;
+  }
+
+  // ── Download chart as PNG ─────────────────────────────────
+  document.getElementById('downloadChartBtn').addEventListener('click', () => {
+    if (!chart) return;
+    const a = document.createElement('a');
+    a.href = chartCanvas.toDataURL('image/png');
+    a.download = `media_penetration_${areaSelect.value}_${taSelect.value}.png`.replace(/\s+/g, '_');
+    a.click();
+  });
+
+  // ── Status bar ────────────────────────────────────────────
+  function setStatus(msg, type = '') {
+    statusBar.style.display = 'block';
+    statusBar.className = 'status-bar' + (type ? ' ' + type : '');
+    statusBar.textContent = msg;
+  }
+</script>
+</body>
+</html>
